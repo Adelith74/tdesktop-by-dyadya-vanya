@@ -447,11 +447,14 @@ void PeerData::paintUserpic(
 		return;
 	}
 	const auto size = context.size;
-	const auto cloud = userpicCloudImage(view);
-	const auto ratio = style::DevicePixelRatio();
 	if (context.shape == Ui::PeerUserpicShape::Auto) {
 		context.shape = userpicShape();
 	}
+	if (Fork::PaintCustomUserpic(this, p, context)) {
+		return;
+	}
+	const auto cloud = userpicCloudImage(view);
+	const auto ratio = style::DevicePixelRatio();
 	Ui::ValidateUserpicCache(
 		view,
 		cloud,

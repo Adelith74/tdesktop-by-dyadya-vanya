@@ -30,6 +30,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "window/window_session_controller.h"
 #include "data/data_session.h"
 #include "data/data_document.h"
+#include "fork/fork_stickers.h"
 #include "data/data_document_media.h"
 #include "data/data_file_click_handler.h"
 #include "data/data_file_origin.h"
@@ -182,7 +183,7 @@ bool Sticker::readyToDrawAnimationFrame() {
 		return true;
 	}
 	const auto sticker = _data->sticker();
-	if (!sticker || _sensitiveBlurred) {
+	if (!sticker || _sensitiveBlurred || Fork::StickerSetBlurred(_data)) {
 		return false;
 	}
 
@@ -457,10 +458,11 @@ QPixmap Sticker::paintedPixmap(const PaintContext &context) const {
 		: context.selected()
 		? &context.st->msgStickerOverlay()
 		: nullptr;
-	const auto good = _sensitiveBlurred
+	const auto blurred = _sensitiveBlurred || Fork::StickerSetBlurred(_data);
+	const auto good = blurred
 		? nullptr
 		: _dataMedia->goodThumbnail();
-	const auto image = _sensitiveBlurred
+	const auto image = blurred
 		? nullptr
 		: _dataMedia->getStickerLarge();
 	if (image) {

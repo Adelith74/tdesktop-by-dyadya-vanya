@@ -106,6 +106,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "data/stickers/data_custom_emoji.h"
 #include "data/data_changes.h"
 #include "data/data_session.h"
+#include "fork/fork_avatars.h"
 #include "data/data_folder.h"
 #include "data/data_poll.h"
 #include "data/data_channel.h"
@@ -307,6 +308,7 @@ private:
 	void addToggleMuteSubmenu(bool addSeparator);
 	void addSupportInfo();
 	void addInfo();
+	void addForkAvatar();
 	void addStoryArchive();
 	void addNewWindow(bool addSeparator = true);
 	void addUngroup();
@@ -654,6 +656,21 @@ void Filler::addInfo() {
 			}
 		}
 	}, infoPeer->isUser() ? &st::menuIconProfile : &st::menuIconInfo);
+}
+
+void Filler::addForkAvatar() {
+	const auto peer = _peer;
+	if (!peer || peer->isSelf()) {
+		return;
+	} else if (Fork::HasCustomUserpic(peer)) {
+		_addAction(tr::lng_fork_avatar_remove(tr::now), [=] {
+			Fork::ClearCustomUserpic(peer);
+		}, &st::menuIconProfile);
+	} else {
+		_addAction(tr::lng_fork_avatar_set(tr::now), [=] {
+			Fork::ChooseCustomUserpic(peer, nullptr);
+		}, &st::menuIconProfile);
+	}
 }
 
 void Filler::addStoryArchive() {
@@ -1938,6 +1955,7 @@ void Filler::fillHistoryActions() {
 	addToggleMuteSubmenu(true);
 	addCreateTopic();
 	addInfo();
+	addForkAvatar();
 	addViewAsTopics();
 	addManageChat();
 	addStoryArchive();

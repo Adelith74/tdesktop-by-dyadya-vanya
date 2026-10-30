@@ -97,6 +97,9 @@ QByteArray SessionSettings::serialize() const {
 		size += sizeof(quint64) + Serialize::stringSize(id.emoji());
 	}
 	size += sizeof(qint32); // _stashHintShowsCount
+	size += Serialize::bytearraySize(_forkDeletedState);
+	size += Serialize::bytearraySize(_forkSettingsState);
+	size += sizeof(quint64); // _forkChannelId
 
 	auto result = QByteArray();
 	result.reserve(size);
@@ -190,6 +193,9 @@ QByteArray SessionSettings::serialize() const {
 			stream << quint64(id.custom()) << id.emoji();
 		}
 		stream << qint32(_stashHintShowsCount);
+		stream << _forkDeletedState;
+		stream << _forkSettingsState;
+		stream << quint64(_forkChannelId);
 	}
 
 	Ensures(result.size() == size);
@@ -821,6 +827,16 @@ void SessionSettings::addFromSerialized(
 	_phoneNumberHidden = (phoneNumberHidden == 1);
 	_extraFavoriteReactions = std::move(extraFavoriteReactions);
 	_stashHintShowsCount = stashHintShowsCount;
+
+	if (!stream.atEnd()) {
+		stream >> _forkDeletedState;
+	}
+	if (!stream.atEnd()) {
+		stream >> _forkSettingsState;
+	}
+	if (!stream.atEnd()) {
+		stream >> _forkChannelId;
+	}
 
 	if (version < 2) {
 		app.setLastSeenWarningSeen(appLastSeenWarningSeen == 1);

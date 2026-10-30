@@ -3212,6 +3212,18 @@ void HistoryItem::addToUnreadThings(HistoryUnreadThings::AddType type) {
 	}
 }
 
+void HistoryItem::markDeletedLocally(TimeId at, bool byOther) {
+	if (_deletedLocallyAt) {
+		return;
+	}
+	_deletedLocallyAt = at;
+	_deletedLocallyByOther = byOther;
+}
+
+void HistoryItem::applyDeletedBookkeeping() {
+	destroyHistoryEntry();
+}
+
 void HistoryItem::destroyHistoryEntry() {
 	if (isUnreadMention()) {
 		history()->unreadMentions().erase(id);

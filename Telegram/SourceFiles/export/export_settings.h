@@ -84,6 +84,8 @@ struct Settings {
 	Types fullChats = DefaultFullChats();
 	MediaSettings media;
 
+	bool deletedMessages = true;
+
 	MTPInputPeer singlePeer = MTP_inputPeerEmpty();
 	TimeId singlePeerFrom = 0;
 	TimeId singlePeerTill = 0;

@@ -94,6 +94,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "data/data_message_reactions.h"
 #include "data/data_user.h"
 #include "data/stickers/data_custom_emoji.h"
+#include "fork/fork_stickers.h"
 #include "chat_helpers/message_field.h" // FactcheckFieldIniter.
 #include "core/file_utilities.h"
 #include "core/click_handler_types.h"
@@ -470,6 +471,13 @@ void AddDocumentActions(
 				: tr::lng_context_pack_add(tr::now)),
 			[=] { ShowStickerPackInfo(document, list); },
 			&st::menuIconStickers);
+		const auto blurred = Fork::StickerSetBlurred(document);
+		menu->addAction(
+			(blurred
+				? tr::lng_context_pack_unblur(tr::now)
+				: tr::lng_context_pack_blur(tr::now)),
+			[=] { Fork::ToggleStickerSetBlur(document); },
+			&st::menuIconStealth);
 	}
 	const auto sending = item && item->isSending();
 	if (!sending && document->sticker() && !document->sticker()->set) {

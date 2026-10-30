@@ -27,6 +27,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "core/update_checker.h"
 #include "data/data_auto_download.h"
 #include "data/data_session.h"
+#include "fork/fork_config.h"
 #include "export/export_manager.h"
 #include "info/downloads/info_downloads_widget.h"
 #include "info/info_memento.h"
@@ -1253,6 +1254,49 @@ void BuildUpdateSection(SectionBuilder &builder, bool atTop) {
 	}
 }
 
+void BuildForkSection(SectionBuilder &builder) {
+	const auto session = builder.session();
+	const auto config = &session->data().forkConfig();
+	builder.addSkip();
+	builder.addDivider();
+	builder.addSkip();
+
+	const auto keep = builder.addCheckbox({
+		.id = u"advanced/fork_keep_deleted"_q,
+		.title = tr::lng_fork_settings_keep_deleted(),
+		.checked = config->deletedRetained(),
+		.keywords = { u"deleted"_q, u"messages"_q },
+	});
+	if (keep) {
+		keep->checkedChanges(
+		) | rpl::on_next([=](bool checked) {
+			config->setDeletedRetained(checked);
+		}, keep->lifetime());
+	}
+
+	const auto label = [=](int count) {
+		return count
+			? tr::lng_fork_settings_count(tr::now, lt_count, count)
+			: QString();
+	};
+	builder.addButton({
+		.id = u"advanced/fork_ignored"_q,
+		.title = tr::lng_fork_settings_clear_ignored(),
+		.label = label(config->ignoredCount()),
+		.st = &st::settingsButtonNoIcon,
+		.keywords = { u"ignored"_q, u"users"_q },
+		.onClick = [=] { config->clearIgnored(); },
+	});
+	builder.addButton({
+		.id = u"advanced/fork_blurred"_q,
+		.title = tr::lng_fork_settings_clear_blurred(),
+		.label = label(config->blurredSetsCount()),
+		.st = &st::settingsButtonNoIcon,
+		.keywords = { u"stickers"_q, u"blur"_q },
+		.onClick = [=] { config->clearBlurredSets(); },
+	});
+}
+
 void BuildExportSection(SectionBuilder &builder) {
 	const auto controller = builder.controller();
 	const auto session = builder.session();
@@ -1361,6 +1405,7 @@ const auto kMeta = BuildHelper({
 		BuildUpdateSection(builder, false);
 	}
 	BuildExportSection(builder);
+	BuildForkSection(builder);
 });
 
 const SectionBuildMethod kAdvancedSection = kMeta.build;

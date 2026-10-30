@@ -967,6 +967,18 @@ PRIVATE
     export/view/export_view_settings.h
     export/view/export_view_top_bar.cpp
     export/view/export_view_top_bar.h
+    fork/fork_avatars.cpp
+    fork/fork_avatars.h
+    fork/fork_channel.cpp
+    fork/fork_channel.h
+    fork/fork_config.cpp
+    fork/fork_config.h
+    fork/fork_deleted_store.cpp
+    fork/fork_deleted_store.h
+    fork/fork_ignored.cpp
+    fork/fork_ignored.h
+    fork/fork_stickers.cpp
+    fork/fork_stickers.h
     history/admin_log/history_admin_log_filter.cpp
     history/admin_log/history_admin_log_filter.h
     history/admin_log/history_admin_log_inner.cpp

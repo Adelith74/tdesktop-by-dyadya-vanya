@@ -38,6 +38,12 @@ namespace Main {
 class Session;
 } // namespace Main
 
+namespace Fork {
+class DeletedStore;
+class Config;
+class SettingsChannel;
+} // namespace Fork
+
 namespace Ui {
 class BoxContent;
 } // namespace Ui
@@ -211,6 +217,15 @@ public:
 	}
 	[[nodiscard]] Histories &histories() const {
 		return *_histories;
+	}
+	[[nodiscard]] Fork::DeletedStore &forkDeleted() const {
+		return *_forkDeleted;
+	}
+	[[nodiscard]] Fork::Config &forkConfig() const {
+		return *_forkConfig;
+	}
+	[[nodiscard]] Fork::SettingsChannel &forkChannel() const {
+		return *_forkChannel;
 	}
 	[[nodiscard]] Stickers &stickers() const {
 		return *_stickers;
@@ -1432,6 +1447,9 @@ private:
 	const std::unique_ptr<Streaming> _streaming;
 	const std::unique_ptr<MediaRotation> _mediaRotation;
 	const std::unique_ptr<Histories> _histories;
+	const std::unique_ptr<Fork::DeletedStore> _forkDeleted;
+	const std::unique_ptr<Fork::Config> _forkConfig;
+	const std::unique_ptr<Fork::SettingsChannel> _forkChannel;
 	const std::unique_ptr<Stickers> _stickers;
 	const std::unique_ptr<Reactions> _reactions;
 	const std::unique_ptr<EmojiStatuses> _emojiStatuses;

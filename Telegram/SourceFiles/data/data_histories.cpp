@@ -23,6 +23,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "data/data_saved_sublist.h"
 #include "data/data_session.h"
 #include "data/data_user.h"
+#include "fork/fork_deleted_store.h"
 #include "base/unixtime.h"
 #include "base/random.h"
 #include "main/main_session.h"
@@ -824,6 +825,13 @@ void Histories::deleteMessages(
 		not_null<History*> history,
 		const QVector<MTPint> &ids,
 		bool revoke) {
+	auto own = std::vector<FullMsgId>();
+	own.reserve(ids.size());
+	for (const auto &id : ids) {
+		own.emplace_back(history->peer->id, MsgId(id.v));
+	}
+	session().data().forkDeleted().noteOwnDeletion(own);
+
 	sendRequest(history, RequestType::Delete, [=](Fn<void()> finish) {
 		const auto done = [=](const MTPmessages_AffectedMessages &result) {
 			session().api().applyAffectedMessages(history->peer, result);

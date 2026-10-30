@@ -16,6 +16,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "data/data_photo.h"
 #include "data/data_poll.h"
 #include "data/data_session.h"
+#include "fork/fork_ignored.h"
 #include "data/data_story.h"
 #include "data/data_todo_list.h"
 #include "data/data_user.h"
@@ -425,7 +426,9 @@ void Reply::update(
 		.session = &view->history()->session(),
 		.repaint = repaint,
 	}));
-	const auto text = (!_displaying && data->unavailable())
+	const auto text = Fork::IsIgnoredSender(message)
+		? TextWithEntities{ .text = tr::lng_fork_ignored_user(tr::now) }
+		: (!_displaying && data->unavailable())
 		? TextWithEntities()
 		: task
 		? Ui::Text::Colorized(task->completionDate

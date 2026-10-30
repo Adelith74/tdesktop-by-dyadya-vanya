@@ -155,6 +155,9 @@ public:
 	void destroyMessagesByTopic(MsgId topicRootId);
 	void destroyMessagesBySublist(not_null<PeerData*> sublistPeer);
 
+	// Recreates every view, so hiding a sender takes effect in a loaded history.
+	void rebuildViewsForHiddenSenders();
+
 	void unpinMessagesFor(MsgId topicRootId, PeerId monoforumPeerId);
 
 	not_null<HistoryItem*> addNewMessage(

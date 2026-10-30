@@ -25,6 +25,9 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "ui/color_int_conversion.h"
 #include "export/export_manager.h"
 #include "export/view/export_view_panel_controller.h"
+#include "fork/fork_deleted_store.h"
+#include "fork/fork_config.h"
+#include "fork/fork_channel.h"
 #include "mtproto/mtproto_config.h"
 #include "wallet/wallet_session.h"
 #include "wallet/wallet_transfer_messages.h"
@@ -341,6 +344,9 @@ Session::Session(not_null<Main::Session*> session)
 , _streaming(std::make_unique<Streaming>(this))
 , _mediaRotation(std::make_unique<MediaRotation>())
 , _histories(std::make_unique<Histories>(this))
+, _forkDeleted(std::make_unique<Fork::DeletedStore>(this))
+, _forkConfig(std::make_unique<Fork::Config>(session))
+, _forkChannel(std::make_unique<Fork::SettingsChannel>(session))
 , _stickers(std::make_unique<Stickers>(this))
 , _reactions(std::make_unique<Reactions>(this))
 , _emojiStatuses(std::make_unique<EmojiStatuses>(this))
@@ -355,6 +361,8 @@ Session::Session(not_null<Main::Session*> session)
 , _shortcutMessages(std::make_unique<ShortcutMessages>(this)) {
 	_cache->open(_session->local().cacheKey());
 	_bigFileCache->open(_session->local().cacheBigFileKey());
+	_forkDeleted->addFromSerialized(_session->settings().forkDeletedState());
+	_forkChannel->start();
 
 	if constexpr (Platform::IsLinux()) {
 		const auto wasVersion = _session->local().oldMapVersion();
@@ -3153,6 +3161,7 @@ void Session::registerMessage(not_null<HistoryItem*> item) {
 	if (!peerIsChannel(peerId) && IsServerMsgId(itemId)) {
 		_nonChannelMessages.emplace(itemId, item);
 	}
+	_forkDeleted->restore(item);
 }
 
 void Session::registerMessageTTL(TimeId when, not_null<HistoryItem*> item) {
@@ -3346,8 +3355,12 @@ void Session::processMessagesDeleted(
 	for (const auto &messageId : data) {
 		const auto i = list ? list->find(messageId.v) : Messages::iterator();
 		if (list && i != list->end()) {
-			const auto history = i->second->history();
-			toDestroy.push_back(i->second);
+			const auto item = i->second;
+			if (_forkDeleted->retain(item)) {
+				continue;
+			}
+			const auto history = item->history();
+			toDestroy.push_back(item);
 			historiesToCheck.emplace(history);
 		} else if (affected) {
 			affected->unknownMessageDeleted(messageId.v);
@@ -3371,6 +3384,9 @@ void Session::processNonChannelMessagesDeleted(const QVector<MTPint> &data) {
 	auto historiesToCheck = base::flat_set<not_null<History*>>();
 	for (const auto &messageId : data) {
 		if (const auto item = nonChannelMessage(messageId.v)) {
+			if (_forkDeleted->retain(item)) {
+				continue;
+			}
 			const auto history = item->history();
 			toDestroy.push_back(item);
 			historiesToCheck.emplace(history);

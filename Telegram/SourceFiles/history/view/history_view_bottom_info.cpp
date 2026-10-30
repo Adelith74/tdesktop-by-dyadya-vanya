@@ -83,6 +83,32 @@ namespace {
 		time);
 }
 
+[[nodiscard]] QString FormatDeletedDate(
+		QDateTime sent,
+		QDateTime deleted,
+		bool byOther) {
+	const auto today = QDateTime::currentDateTime().date();
+	const auto time = QLocale().toString(deleted.time(), QLocale::ShortFormat);
+	if (sent.date() == today && deleted.date() == today) {
+		return byOther
+			? tr::lng_deleted_by_peer_at(tr::now, lt_time, time)
+			: tr::lng_deleted_at(tr::now, lt_time, time);
+	}
+	return byOther
+		? tr::lng_deleted_by_peer_on(
+			tr::now,
+			lt_date,
+			langDayOfMonthShort(deleted.date()),
+			lt_time,
+			time)
+		: tr::lng_deleted_on(
+			tr::now,
+			lt_date,
+			langDayOfMonthShort(deleted.date()),
+			lt_time,
+			time);
+}
+
 } // namespace
 
 struct BottomInfo::Effect {
@@ -152,6 +178,7 @@ int BottomInfo::firstLineWidth() const {
 
 bool BottomInfo::isWide() const {
 	return (_data.flags & Data::Flag::Edited)
+		|| (_data.flags & Data::Flag::Deleted)
 		|| _data.scheduleRepeatPeriod
 		|| !_data.author.isEmpty()
 		|| !_views.isEmpty()
@@ -515,13 +542,19 @@ void BottomInfo::layoutDateText() {
 	const auto name = _authorElided
 		? st::msgDateFont->elided(author, maxWidth - afterAuthorWidth)
 		: author;
-	const auto full = (_data.flags & Data::Flag::Sponsored)
+	auto full = (_data.flags & Data::Flag::Sponsored)
 		? QString()
 		: (_data.flags & Data::Flag::Imported)
 		? (date + ' ' + tr::lng_imported(tr::now))
 		: name.isEmpty()
 		? date
 		: (name + afterAuthor);
+	if (_data.flags & Data::Flag::Deleted) {
+		full += ' ' + FormatDeletedDate(
+			_data.date,
+			_data.deletedDate,
+			_data.deletedByOther);
+	}
 	auto helper = Ui::Text::CustomEmojiHelper(
 		Core::TextContext({ .session = &_reactionsOwner->session() }));
 	auto marked = TextWithEntities();
@@ -700,6 +733,12 @@ BottomInfo::Data BottomInfoDataFromMessage(not_null<Message*> message) {
 	}
 	if (IsAnchoredEphemeral(item)) {
 		result.flags |= Flag::Updated;
+	}
+	if (item->deletedLocally()) {
+		result.flags |= Flag::Deleted;
+		result.deletedDate = base::unixtime::parse(item->deletedLocallyAt());
+		result.deletedByOther = item->deletedLocallyByOther()
+			&& item->history()->peer->isUser();
 	}
 	if (const auto views = item->Get<HistoryMessageViews>()) {
 		if (views->views.count >= 0) {

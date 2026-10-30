@@ -270,6 +270,19 @@ void SettingsWidget::setupOtherOptions(
 		tr::lng_export_option_other(tr::now),
 		Type::OtherData,
 		tr::lng_export_option_other_about(tr::now));
+	const auto deleted = container->add(
+		object_ptr<Ui::Checkbox>(
+			container,
+			tr::lng_export_option_deleted(tr::now),
+			readData().deletedMessages,
+			st::defaultBoxCheckbox),
+		st::exportSettingPadding);
+	deleted->checkedChanges(
+	) | rpl::on_next([=](bool checked) {
+		changeData([&](Settings &data) {
+			data.deletedMessages = checked;
+		});
+	}, deleted->lifetime());
 }
 
 void SettingsWidget::setupPathAndFormat(

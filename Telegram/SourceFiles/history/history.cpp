@@ -13,6 +13,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "dialogs/dialogs_indexed_list.h"
 #include "history/history_inner_widget.h"
 #include "history/history_item.h"
+#include "fork/fork_ignored.h"
 #include "history/history_item_components.h"
 #include "history/history_item_helpers.h"
 #include "history/history_streamed_drafts.h"
@@ -803,6 +804,35 @@ void History::destroyMessagesBySublist(not_null<PeerData*> sublistPeer) {
 	for (const auto &item : toDestroy) {
 		item->destroy();
 	}
+}
+
+void History::rebuildViewsForHiddenSenders() {
+	auto items = std::vector<not_null<HistoryItem*>>();
+	items.reserve(_items.size());
+	for (const auto &item : _items) {
+		items.push_back(item.get());
+	}
+	ranges::sort(items, ranges::less(), [](not_null<HistoryItem*> item) {
+		return item->id;
+	});
+	for (const auto &item : items) {
+		item->removeMainView();
+	}
+	blocks.clear();
+	_lastMessage = std::nullopt;
+	_lastServerMessage = std::nullopt;
+	if (_buildingFrontBlock) {
+		_buildingFrontBlock->block = nullptr;
+	}
+	for (const auto &item : items) {
+		addItemToBlock(item);
+	}
+	if (loadedAtBottom()) {
+		if (const auto last = lastAvailableMessage()) {
+			setLastMessage(last);
+		}
+	}
+	owner().notifyHistoryChangeDelayed(this);
 }
 
 void History::unpinMessagesFor(MsgId topicRootId, PeerId monoforumPeerId) {
@@ -1859,6 +1889,14 @@ void History::viewReplaced(not_null<const Element*> was, Element *now) {
 void History::addItemToBlock(not_null<HistoryItem*> item) {
 	Expects(!item->mainView());
 
+	if (Fork::IsIgnoredSender(item)) {
+		if (isBuildingFrontBlock()
+			&& _buildingFrontBlock->expectedItemsCount > 0) {
+			--_buildingFrontBlock->expectedItemsCount;
+		}
+		return;
+	}
+
 	auto block = prepareBlockForAddingItem();
 
 	block->messages.push_back(item->createView(_delegateMixin->delegate()));
@@ -2346,7 +2384,15 @@ MsgId History::outboxReadTillId() const {
 }
 
 HistoryItem *History::lastAvailableMessage() const {
-	return isEmpty() ? nullptr : blocks.back()->messages.back()->data().get();
+	for (auto i = blocks.rbegin(); i != blocks.rend(); ++i) {
+		const auto &messages = (*i)->messages;
+		for (auto j = messages.rbegin(); j != messages.rend(); ++j) {
+			if (!Fork::IsIgnoredSender((*j)->data())) {
+				return (*j)->data();
+			}
+		}
+	}
+	return nullptr;
 }
 
 int History::unreadCount() const {
@@ -3223,6 +3269,8 @@ auto History::computeChatListMessageFromLast() const
 -> std::optional<HistoryItem*> {
 	if (!_lastMessage) {
 		return _lastMessage;
+	} else if (Fork::IsIgnoredSender(_lastMessage.value_or(nullptr))) {
+		return lastAvailableMessage();
 	}
 
 	// In migrated groups we want to skip essential message

@@ -679,6 +679,18 @@ public:
 		return _ttlDestroyAt;
 	}
 
+	[[nodiscard]] bool deletedLocally() const {
+		return (_deletedLocallyAt != 0);
+	}
+	[[nodiscard]] TimeId deletedLocallyAt() const {
+		return _deletedLocallyAt;
+	}
+	[[nodiscard]] bool deletedLocallyByOther() const {
+		return _deletedLocallyByOther;
+	}
+	void markDeletedLocally(TimeId at, bool byOther);
+	void applyDeletedBookkeeping();
+
 	[[nodiscard]] int boostsApplied() const {
 		return _boostsApplied;
 	}
@@ -830,6 +842,8 @@ private:
 
 	TimeId _date = 0;
 	TimeId _ttlDestroyAt = 0;
+	TimeId _deletedLocallyAt = 0;
+	bool _deletedLocallyByOther = false;
 	int _boostsApplied = 0;
 	int _starsPaid = 0;
 	BusinessShortcutId _shortcutId = 0;

@@ -386,6 +386,12 @@ This atlas divides Telegram Desktop's sources into named areas, ordered from fou
 - Paths: `SourceFiles/platform/`, `SourceFiles/webauthn/`, `SourceFiles/data/data_passkey_deserialize*`, `SourceFiles/menu/menu_dock*`, `SourceFiles/_other/startup_task_win.cpp`
 - Linux, macOS and Windows implementations behind `platform_*.h`: native window and title, notification backends, tray, launcher and autostart, file dialogs, overlay helpers, OCR, translation providers, wallet key protection, passkeys with caBLE and FIDO2, the Touch Bar and the Dock menu. It must not hold cross-platform feature logic. Today it also holds the shared caBLE passkey protocol, ceremony and QR box in `webauthn/`, which every OS backend calls; that belongs in a passkeys feature area, which does not exist yet.
 
+## Fork
+
+### fork — local client extensions
+- Paths: `SourceFiles/fork/`
+- Features this fork adds on top of Telegram Desktop, kept out of upstream areas so that they rebase cleanly: today the local retention of messages the server deletes, with their own marks and settings. It may read `Data::`, `HistoryItem` and `Main::SessionSettings`, and is reached from upstream code through thin calls only. It must not own chat screens, painting or boxes.
+
 ## Tooling and tests
 
 ### test — test tooling

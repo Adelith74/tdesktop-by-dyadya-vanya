@@ -24,6 +24,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "dialogs/dialogs_indexed_list.h"
 #include "data/data_peer_values.h"
 #include "data/data_session.h"
+#include "fork/fork_ignored.h"
 #include "data/data_stories.h"
 #include "data/data_channel.h"
 #include "data/data_chat.h"
@@ -2044,6 +2045,21 @@ base::unique_qptr<Ui::PopupMenu> ParticipantsBoxController::rowContextMenu(
 			}
 		}
 	});
+	if (user && !user->isSelf()) {
+		const auto ignored = Fork::IsIgnoredSender(participant);
+		result->addAction(
+			(ignored
+				? tr::lng_fork_ignore_off(tr::now)
+				: tr::lng_fork_ignore_on(tr::now)),
+			[=] {
+				Fork::ToggleIgnoredUser(participant);
+				if (const auto history = _peer->owner().historyLoaded(
+						_peer->id)) {
+					history->rebuildViewsForHiddenSenders();
+				}
+			},
+			&st::menuIconStealth);
+	}
 	if (_navigation) {
 		result->addAction(
 			(participant->isUser()

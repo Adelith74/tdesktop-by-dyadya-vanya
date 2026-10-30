@@ -7,6 +7,19 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 */
 #include "export/export_controller.h"
 
+#include "data/data_peer.h"
+#include "data/data_session.h"
+#include "data/data_user.h"
+#include "history/history.h"
+#include "history/history_item.h"
+#include "history/view/history_view_element.h"
+#include "lang/lang_keys.h"
+#include "core/application.h"
+#include "main/main_account.h"
+#include "main/main_domain.h"
+#include "main/main_session.h"
+#include "base/unixtime.h"
+
 #include "export/export_api_wrap.h"
 #include "export/export_settings.h"
 #include "export/data/export_data_types.h"
@@ -576,6 +589,61 @@ void ControllerObject::exportOtherData() {
 	});
 }
 
+namespace {
+
+// Export goes through the API, so messages deleted on the server are missing
+// there; the ones this fork keeps locally are merged back in by hand.
+void AppendDeletedMessages(
+		not_null<Main::Session*> session,
+		PeerId peerId,
+		Data::MessagesSlice &slice) {
+	const auto history = session->data().historyLoaded(peerId);
+	if (!history) {
+		return;
+	}
+	const auto selfId = session->user()->id;
+	auto added = false;
+	for (const auto &block : history->blocks) {
+		for (const auto &view : block->messages) {
+			const auto item = view->data();
+			if (!item->deletedLocally()) {
+				continue;
+			}
+			auto message = Data::Message();
+			message.id = int32(item->id.bare);
+			message.date = item->date();
+			message.fromId = item->from()->id;
+			message.peerId = peerId;
+			message.selfId = selfId;
+			message.out = item->out();
+			message.text.push_back(Data::TextPart{
+				.type = Data::TextPart::Type::Text,
+				.text = item->textWithEntities().text.toUtf8(),
+			});
+			const auto time = QLocale().toString(
+				base::unixtime::parse(item->deletedLocallyAt()).time(),
+				QLocale::ShortFormat);
+			message.text.push_back(Data::TextPart{
+				.type = Data::TextPart::Type::Text,
+				.text = ('\n'
+					+ tr::lng_deleted_at(tr::now, lt_time, time)).toUtf8(),
+			});
+			slice.list.push_back(std::move(message));
+			added = true;
+		}
+	}
+	if (added) {
+		std::sort(
+			slice.list.begin(),
+			slice.list.end(),
+			[](const Data::Message &a, const Data::Message &b) {
+				return a.id < b.id;
+			});
+	}
+}
+
+} // namespace
+
 void ControllerObject::exportDialogs() {
 	if (ioCatchError(_writer->writeDialogsStart(_dialogsInfo))) {
 		return;
@@ -602,6 +670,14 @@ void ControllerObject::exportNextDialog() {
 			setState(stateDialogs(progress));
 			return true;
 		}, [=](Data::MessagesSlice &&result) {
+			if (_settings.deletedMessages) {
+				if (const auto account = Core::App().domain().active()) {
+					AppendDeletedMessages(
+						&account->session(),
+						info.peerId,
+						result);
+				}
+			}
 			if (ioCatchError(_writer->writeDialogSlice(result))) {
 				return false;
 			}

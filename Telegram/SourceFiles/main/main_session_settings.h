@@ -202,6 +202,25 @@ public:
 	[[nodiscard]] auto extraFavoriteReactions() const
 	-> const std::vector<Data::ReactionId> &;
 
+	void setForkDeletedState(QByteArray state) {
+		_forkDeletedState = std::move(state);
+	}
+	[[nodiscard]] const QByteArray &forkDeletedState() const {
+		return _forkDeletedState;
+	}
+	void setForkSettingsState(QByteArray state) {
+		_forkSettingsState = std::move(state);
+	}
+	[[nodiscard]] const QByteArray &forkSettingsState() const {
+		return _forkSettingsState;
+	}
+	void setForkChannelId(quint64 id) {
+		_forkChannelId = id;
+	}
+	[[nodiscard]] quint64 forkChannelId() const {
+		return _forkChannelId;
+	}
+
 private:
 	static constexpr auto kDefaultSupportChatsLimitSlice = 7 * 24 * 60 * 60;
 	static constexpr auto kPhotoEditorHintMaxShowsCount = 5;
@@ -256,6 +275,10 @@ private:
 	rpl::variable<bool> _phoneNumberHidden = false;
 
 	std::vector<Data::ReactionId> _extraFavoriteReactions;
+
+	QByteArray _forkDeletedState;
+	QByteArray _forkSettingsState;
+	quint64 _forkChannelId = 0;
 
 };
 
